@@ -613,27 +613,29 @@ public class InputParser implements Closeable {
 			bot.getUserChannelDao().addUserToChannel(sourceUser, channel);
 			configuration.getListenerManager().onEvent(new JoinEvent(bot, channel, source, sourceUser, tags));
 		} else if (command.equals("PART")) {
-			// Someone is parting from a channel.
-			UserChannelDaoSnapshot daoSnapshot;
-			ChannelSnapshot channelSnapshot;
-			UserSnapshot sourceSnapshot;
-			if (configuration.isSnapshotsEnabled()) {
-				daoSnapshot = bot.getUserChannelDao().createSnapshot();
-				channelSnapshot = daoSnapshot.getChannel(channel.getName());
-				sourceSnapshot = daoSnapshot.getUser(source);
-			} else {
-				daoSnapshot = null;
-				channelSnapshot = null;
-				sourceSnapshot = null;
-			}
+			if(sourceUser != null){
+				// Someone is parting from a channel.
+				UserChannelDaoSnapshot daoSnapshot;
+				ChannelSnapshot channelSnapshot;
+				UserSnapshot sourceSnapshot;
+				if (configuration.isSnapshotsEnabled()) {
+					daoSnapshot = bot.getUserChannelDao().createSnapshot();
+					channelSnapshot = daoSnapshot.getChannel(channel.getName());
+					sourceSnapshot = daoSnapshot.getUser(source);
+				} else {
+					daoSnapshot = null;
+					channelSnapshot = null;
+					sourceSnapshot = null;
+				}
 
-			if (source.getNick().equalsIgnoreCase(bot.getNick()))
-				//We parted the channel
-				bot.getUserChannelDao().removeChannel(channel);
-			else
-				//Just remove the user from memory
-				bot.getUserChannelDao().removeUserFromChannel(sourceUser, channel);
-			configuration.getListenerManager().onEvent(new PartEvent(bot, daoSnapshot, channelSnapshot, channel.getName(), source, sourceSnapshot, message, tags));
+				if (source.getNick().equalsIgnoreCase(bot.getNick()))
+					//We parted the channel
+					bot.getUserChannelDao().removeChannel(channel);
+				else
+					//Just remove the user from memory
+					bot.getUserChannelDao().removeUserFromChannel(sourceUser, channel);
+				configuration.getListenerManager().onEvent(new PartEvent(bot, daoSnapshot, channelSnapshot, channel.getName(), source, sourceSnapshot, message, tags));
+			}
 		} else if (command.equals("NICK")) {
 			// Somebody is changing their nick.
 			sourceUser = createUserIfNull(sourceUser, source);
@@ -647,22 +649,24 @@ public class InputParser implements Closeable {
 			// Someone is sending a notice.
 			configuration.getListenerManager().onEvent(new NoticeEvent(bot, source, sourceUser, channel, target, message, tags));
 		} else if (command.equals("QUIT")) {
-			UserChannelDaoSnapshot daoSnapshot;
-			UserSnapshot sourceSnapshot;
-			if (configuration.isSnapshotsEnabled()) {
-				daoSnapshot = bot.getUserChannelDao().createSnapshot();
-				sourceSnapshot = daoSnapshot.getUser(sourceUser.getNick());
-			} else {
-				daoSnapshot = null;
-				sourceSnapshot = null;
+			if(sourceUser != null){
+				UserChannelDaoSnapshot daoSnapshot;
+				UserSnapshot sourceSnapshot;
+				if (configuration.isSnapshotsEnabled()) {
+					daoSnapshot = bot.getUserChannelDao().createSnapshot();
+					sourceSnapshot = daoSnapshot.getUser(sourceUser.getNick());
+				} else {
+					daoSnapshot = null;
+					sourceSnapshot = null;
+				}
+				//A real target is missing, so index is off
+				String reason = target;
+				// Someone has quit from the IRC server.
+				if (!source.getNick().equals(bot.getNick()))
+					//Someone else
+					bot.getUserChannelDao().removeUser(sourceUser);
+				configuration.getListenerManager().onEvent(new QuitEvent(bot, daoSnapshot, source, sourceSnapshot, reason, tags));
 			}
-			//A real target is missing, so index is off
-			String reason = target;
-			// Someone has quit from the IRC server.
-			if (!source.getNick().equals(bot.getNick()))
-				//Someone else
-				bot.getUserChannelDao().removeUser(sourceUser);
-			configuration.getListenerManager().onEvent(new QuitEvent(bot, daoSnapshot, source, sourceSnapshot, reason, tags));
 		} else if (command.equals("KICK")) {
 			// Somebody has been kicked from a channel.
 			UserHostmask recipientHostmask = bot.getConfiguration().getBotFactory().createUserHostmask(bot, message);
