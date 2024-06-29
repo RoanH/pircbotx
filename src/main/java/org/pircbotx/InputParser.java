@@ -379,6 +379,9 @@ public class InputParser implements Closeable {
 		}
 
 		List<String> parsedLine = Utils.tokenizeLine(line);
+		if(parsedLine.isEmpty()){
+			return;
+		}
 
 		String sourceRaw = "";
 		if (parsedLine.get(0).charAt(0) == ':')
